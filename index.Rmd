@@ -1,0 +1,106 @@
+---
+title: "Human Activity Recognition : Practical Machine Learning (Coursera)"
+author: "Debjyoti Paul"
+date: "Sunday, December 21, 2014"
+output: html_document
+keep_md: yes
+bibliography: bibliography.bib
+---
+
+# Abstract
+In this project, a predictive system has been modelled using Random Forest to infer on the qualitative aspect of Human Activity Recognition using weight lifting exersise dataset [@qualitative]. It will help the users to have a real time feedback on the quality of excetution of the exersise based on sensor data. 
+
+# Data
+This project is based on the Weight Lifting Exercises(WLE) Dataset from Human Activity Recognition project of GroupWare <http://groupware.les.inf.puc-rio.br/har>.
+
+# Initilization
+
+The seed is set to enable reproduction. Libraries required are loaded
+
+```{r}
+set.seed(111)
+library(caret)
+library(randomForest)
+
+```
+
+# Getting Data
+
+The training and testing data are downloaded from the url provided.
+
+```{r}
+tr.file <- 'pml-training.csv'
+te.file <- 'pml-test.csv'
+tr.url  <- 'http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv'
+te.url  <- 'http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv'
+
+download.file(tr.url, tr.file, method='auto')
+download.file(te.url, te.file, method='auto')
+```
+
+# Cleaning Data
+Data is read from .csv format. All the coloumns with inappropriate values or index information are removed.
+
+```{r}
+trdata = read.csv(file=tr.file, header=TRUE, sep=",")
+tedata = read.csv(file=te.file, header=TRUE, sep=",")
+trdata = subset( trdata, select = -1 )
+tedata = subset( tedata, select = -1 )
+nums <- sapply(trdata, is.numeric)
+cleandata <- trdata[,nums]
+training <- cleandata[ , colSums(is.na(cleandata)) == 0]
+```
+
+# Partition Data
+
+The cleaned data is partitioned into Training and Testing dataset.
+
+```{r}
+trainingIndex  <- createDataPartition(trdata$classe, p=.75, list=FALSE)
+trainData <- training[ trainingIndex,]
+testData  <- training[-trainingIndex,]
+```
+# Training
+The predctive model is trained using the training data.
+
+## Method
+The **Random Forests** method [@random], which applies bagging to tree learners. The **Bootstap Aggregating** (**bagging**) method is described in [@bagging]
+
+
+## Train
+The model is trained using **train** function. The "**method = "rf"**" specifies the random forest method.
+```{r}
+modFit <- train(trdata[trainingIndex,]$classe ~ .,method = "rf", data = trainData)
+```
+
+
+# Result
+
+The predictive model after training and the Training result
+```{r}
+modFit
+
+print(modFit$finalModel)
+```
+
+```{r, echo=FALSE}
+plot(modFit)
+```
+An instance of a tree in the random forest.
+```{r}
+getTree( modFit$finalModel , k = 3)
+```
+
+Confusion matrix and statistics depicting the Performance of the model on the testing data(testData)
+
+```{r}
+pred <- predict( modFit, newdata = testData )
+confusionMatrix(pred,trdata[-trainingIndex,]$classe)
+```
+
+```{r}
+plot( varImp(modFit) )
+```
+
+
+#References
